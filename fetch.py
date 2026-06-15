@@ -5,6 +5,8 @@ from datetime import datetime
 import httpx
 from curl_cffi import requests as cf_requests
 from dotenv import load_dotenv
+
+from save_files import save_to_minio
 from utils.logger import get_logger
 
 
@@ -48,9 +50,16 @@ def load_jsons():
             logger.info(f"writing to {write_path}/{name}_DATETIME.json...")
             now = datetime.now()
             timestamp = now.strftime("%Y-%m-%dT%H:%M:%SZ")
-            file = f"{name}_{timestamp}.json"
-            with open(write_path / file, "w") as f:
-                f.write(response.text)
+            file = f"{name}_{timestamp}"
+
+            # TEST LOCALLY
+            # file = file + ".json"
+            # with open(write_path / file, "w") as f:
+            #     f.write(response.text)
+
+            # ORIGINAL: SAVE TO MINIOBUCKET
+            save_to_minio(file, response.text)
+
             logger.info(f"writing to {file} finished")
             logger.info("fetching finished successfully")
 
