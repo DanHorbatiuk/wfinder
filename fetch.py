@@ -3,10 +3,13 @@ from pathlib import Path
 from datetime import datetime
 
 import httpx
+from anyio.streams import file
+from botocore.exceptions import ClientError
 from curl_cffi import requests as cf_requests
 from dotenv import load_dotenv
 
-from save_files import save_to_minio
+from storage.loader import save_file_record
+from storage.minio import save_object
 from utils.logger import get_logger
 
 
@@ -30,7 +33,7 @@ S5_PATH = Path(os.path.realpath(__file__)).parent
 write_path = S5_PATH / 'downloads'
 
 
-def load_jsons():
+def get_data_from_resources():
     logger.info("start fetching resources...")
     for name, url in urls.items():
         try:
@@ -47,26 +50,37 @@ def load_jsons():
             logger.info(f"fetching {name} finished")
 
             logger.debug(response.text)
-            logger.info(f"writing to {write_path}/{name}_DATETIME.json...")
             now = datetime.now()
             timestamp = now.strftime("%Y-%m-%dT%H:%M:%SZ")
-            file = f"{name}_{timestamp}"
-
-            # TEST LOCALLY
-            # file = file + ".json"
-            # with open(write_path / file, "w") as f:
-            #     f.write(response.text)
-
-            # ORIGINAL: SAVE TO MINIOBUCKET
-            save_to_minio(file, response.text)
-
-            logger.info(f"writing to {file} finished")
+            file_name = f"{name}_{timestamp}"
+            logger.info(f"save file and meta {file_name}...")
+            load_file_and_meta(file_name, response.text)
+            logger.info(f"file and meta {file_name} finished successfully")
             logger.info("fetching finished successfully")
 
         except httpx.HTTPStatusError as e:
-            logger.error(f"Error fetching {name}: {e}")
+            logger.error(f"error fetching {name}: {e}")
             continue
         except httpx.RequestError as e:
-            logger.error("Network error:", str(e))
+            logger.error("network error:", str(e))
         except Exception as e:
-            logger.error(f"Unknown error (fetch): {e}")
+            logger.error(f"unknown error (fetch): {e}")
+
+
+def load_file_and_meta(f_name, content):
+    try:
+        logger.info(f"loading file {f_name} to minio bucket...")
+        meta = save_object(f_name, content)
+        logger.info(f"file {f_name} saved to minio bucket")
+        logger.debug(meta)
+        logger.info(f"saving file {f_name} metadata to database...")
+        save_file_record(
+            bucket=meta["bucket"],
+            key=meta["key"],
+            source=f_name.split("_")[0],
+            etag=meta["etag"],
+            size_bytes=meta["size_bytes"],
+        )
+        logger.info(f"file metadata {f_name} saved to database")
+    except ClientError as e:
+        logger.error(f"error saving {file}: {e}")

@@ -1,9 +1,8 @@
-# MINIO files saving
-import os
-
 import boto3
 from botocore.exceptions import ClientError
 from dotenv import load_dotenv
+
+from core.setting import get_settings
 from utils.logger import get_logger
 
 
@@ -14,10 +13,10 @@ load_dotenv()
 logger.info(f"file '.env' loaded")
 
 
-aws_access_key_id = os.getenv("MINIO_ROOT_USER")
-aws_secret_access_key = os.getenv("MINIO_ROOT_PASSWORD")
-minio_endpoint = os.getenv("MINIO_ENDPOINT")
-BUCKET = os.getenv("MINIO_BUCKET_NAME")
+aws_access_key_id = get_settings().minio_root_user
+aws_secret_access_key = get_settings().minio_root_password
+minio_endpoint = get_settings().minio_endpoint
+BUCKET = get_settings().minio_bucket_name
 
 _s3_client = None
 
@@ -52,18 +51,25 @@ def _ensure_bucket_exists(s3_client):
             raise
 
 
-def save_object(name: str, content: str):
+def save_object(name: str, content: str) -> dict:
     s3_client = get_s3_client()
     key = f"raw/{name}.json"
     logger.info(f"saving '{name}' to minio bucket '{BUCKET}'...")
+    body_bytes = content.encode("utf-8")
     try:
-        s3_client.put_object(
+        response = s3_client.put_object(
             Bucket=BUCKET,
             Key=key,
-            Body=content.encode("utf-8"),
+            Body=body_bytes,
             ContentType="application/json",
         )
         logger.info(f"saving '{key}' is finished")
+        return {
+            "bucket": BUCKET,
+            "key": key,
+            "etag": response["ETag"].strip('"'),
+            "size_bytes": len(body_bytes),
+        }
     except ClientError as e:
         logger.error(f"failed saving '{key}': {e}")
         raise
