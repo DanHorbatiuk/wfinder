@@ -4,9 +4,9 @@ from airflow.sdk import dag, task
 
 
 @dag(
-    schedule="0 8 * * *",  # daily at 8:00 am
+    schedule="30 8 * * *",  # daily at 8:30 am UTC
     start_date=datetime(2026, 6, 16),
-    catchup=False,
+    catchup=True,
 )
 def load_courses_pipeline_dag():
 

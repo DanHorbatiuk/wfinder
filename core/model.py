@@ -49,7 +49,7 @@ class Course(Base):
     source = Column(String, nullable=False)  # "epam" | "softserve" | "sigma"
     source_id = Column(String, nullable=False)  # original id from source (str to cover all cases)
     title = Column(String, nullable=False)
-    url = Column(String, unique=True, nullable=True)
+    url = Column(String, nullable=True)
     course_type = Column(String, nullable=True)  # "Training", "Internship", "Course"
     direction = Column(String, nullable=True)  # "DevOps", "CloudAndDevOps", "QA"
     format = Column(String, nullable=True)  # "Online", "Offline"
