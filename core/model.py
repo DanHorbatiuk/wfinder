@@ -1,30 +1,38 @@
 from datetime import datetime
 
-from sqlalchemy import ForeignKey, UniqueConstraint
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    UniqueConstraint, Index,
+)
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import DeclarativeBase, Mapped, relationship, mapped_column
+from sqlalchemy.orm import declarative_base, relationship
 
-
-class Base(DeclarativeBase):
-    pass
+Base = declarative_base()
 
 
 class FileRecord(Base):
     __tablename__ = "file_record"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    bucket: Mapped[str]
-    key: Mapped[str] = mapped_column(unique=True)
-    etag: Mapped[str]
-    source: Mapped[str] # "epam" | "softserve" | "sigma"
-    status: Mapped[str] = mapped_column(default="pending") # pending → processing → done/error
-    size_bytes: Mapped[int | None]
-    uploaded_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
-    processed_at: Mapped[datetime | None]
-    error_message: Mapped[str | None]
 
-    courses: Mapped[list["Course"]] = relationship(
+    id = Column(Integer, primary_key=True)
+    bucket = Column(String, nullable=False)
+    key = Column(String, unique=True, nullable=False)
+    etag = Column(String, nullable=False)
+    source = Column(String, nullable=False)  # "epam" | "softserve" | "sigma"
+    status = Column(String, default="pending", nullable=False)  # pending → processing → done/error
+    size_bytes = Column(Integer, nullable=True)
+    uploaded_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    processed_at = Column(DateTime, nullable=True)
+    error_message = Column(String, nullable=True)
+
+    courses = relationship(
+        "Course",
         back_populates="file_record",
-        cascade="all, delete-orphan" # каскадне видалення
+        cascade="all, delete-orphan",  # каскадне видалення
     )
 
     def __repr__(self) -> str:
@@ -34,34 +42,35 @@ class FileRecord(Base):
 class Course(Base):
     __tablename__ = "courses"
     __table_args__ = (
-        UniqueConstraint("source", "source_id", name="uq_course_source_id"),
-    )
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    source: Mapped[str]  # "epam" | "softserve" | "sigma"
-    source_id: Mapped[str]       # original id from source (str to cover all cases)
-    title: Mapped[str]
-    url: Mapped[str | None] = mapped_column(unique=True)
-    course_type: Mapped[str | None]   # "Training", "Internship", "Course"
-    direction: Mapped[str | None]     # "DevOps", "CloudAndDevOps", "QA"
-    format: Mapped[str | None]        # "Online", "Offline"
-    level: Mapped[str | None]         # "Junior", "Middle", "Specialization"
-    is_free: Mapped[bool] = mapped_column(default=False)
-    price: Mapped[str | None]         # "Free" or actual price string
-    date_start: Mapped[datetime | None]
-    date_end: Mapped[datetime | None]
-    status: Mapped[str | None]        # "Open for Registration", "RegistrationOpen"
-    is_expired: Mapped[bool] = mapped_column(default=False)
-    country: Mapped[str | None]
-    city: Mapped[str | None]
-    languages: Mapped[list | None] = mapped_column(JSONB)  # ["English", "Ukrainian"]
-
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        default=datetime.utcnow, onupdate=datetime.utcnow
+        Index("ix_course_source_source_id", "source", "source_id"),
     )
 
-    file_record_id: Mapped[int] = mapped_column(ForeignKey("file_record.id"))
-    file_record: Mapped["FileRecord"] = relationship(back_populates="courses")
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    source = Column(String, nullable=False)  # "epam" | "softserve" | "sigma"
+    source_id = Column(String, nullable=False)  # original id from source (str to cover all cases)
+    title = Column(String, nullable=False)
+    url = Column(String, unique=True, nullable=True)
+    course_type = Column(String, nullable=True)  # "Training", "Internship", "Course"
+    direction = Column(String, nullable=True)  # "DevOps", "CloudAndDevOps", "QA"
+    format = Column(String, nullable=True)  # "Online", "Offline"
+    level = Column(String, nullable=True)  # "Junior", "Middle", "Specialization"
+    is_free = Column(Boolean, default=False, nullable=False)
+    price = Column(String, nullable=True)  # "Free" or actual price string
+    date_start = Column(DateTime, nullable=True)
+    date_end = Column(DateTime, nullable=True)
+    status = Column(String, nullable=True)  # "Open for Registration", "RegistrationOpen"
+    is_expired = Column(Boolean, default=False, nullable=False)
+    country = Column(String, nullable=True)
+    city = Column(String, nullable=True)
+    languages = Column(JSONB, nullable=True)  # ["English", "Ukrainian"]
+
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
+
+    file_record_id = Column(Integer, ForeignKey("file_record.id"), nullable=False)
+    file_record = relationship("FileRecord", back_populates="courses")
 
     def __repr__(self) -> str:
         return (
