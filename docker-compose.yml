@@ -43,7 +43,7 @@ services:
         condition: service_healthy
     environment:
       MB_DB_TYPE: postgres
-      MB_DB_DBNAME: ${POSTGRES_DB}
+      MB_DB_DBNAME: ${MB_DB_DBNAME}
       MB_DB_PORT: 5432
       MB_DB_USER: ${POSTGRES_USER}
       MB_DB_PASS: ${POSTGRES_PASSWORD}
@@ -141,6 +141,8 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
       MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME}
+      CAREERS_URL_EPAM: ${CAREERS_URL_EPAM}
+      CAREERS_URL_SOFTSERVE: ${CAREERS_URL_SOFTSERVE}
     volumes:
       - ./dags:/opt/airflow/dags
       - ./adapters:/opt/airflow/adapters

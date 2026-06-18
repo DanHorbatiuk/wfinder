@@ -7,7 +7,7 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
-    UniqueConstraint, Index,
+    Index,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import declarative_base, relationship

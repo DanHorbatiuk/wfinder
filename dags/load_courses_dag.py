@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from airflow.sdk import dag, task
 
@@ -6,15 +6,27 @@ from airflow.sdk import dag, task
 @dag(
     schedule="30 8 * * *",  # daily at 8:30 am UTC
     start_date=datetime(2026, 6, 16),
-    catchup=True,
+    catchup=False,
 )
+
 def load_courses_pipeline_dag():
 
     @task
-    def fetch_and_save_data():
-        from fetch import get_data_from_resources
-        get_data_from_resources()
-        return True
+    def get_sources() -> list[dict]:
+        import os
+        from dotenv import load_dotenv
+        load_dotenv()
+        PREFIX = "CAREERS_URL_"
+        list = []
+        for key, value in os.environ.items():
+            if key.startswith(PREFIX):
+                list.append({"name": key.removeprefix(PREFIX).lower(), "url": value})
+        return list
+
+    @task(retries=3, retry_delay=timedelta(minutes=2), max_active_tis_per_dag=5)
+    def fetch_one_source(source: dict) -> dict:
+        from fetch import fetch_and_save_single
+        return fetch_and_save_single(source["name"], source["url"])
 
     @task
     def load_all_to_db():
@@ -22,7 +34,8 @@ def load_courses_pipeline_dag():
         process_pending_files()
         return True
 
-    fetch_task = fetch_and_save_data()
+    sources = get_sources()
+    fetch_task = fetch_one_source.expand(source=sources)
     load_task = load_all_to_db()
 
     _ = fetch_task >> load_task

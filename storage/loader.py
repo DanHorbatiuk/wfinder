@@ -40,10 +40,8 @@ def process_one_file(
     content = response["Body"].read()
     raw_data = json.loads(content)
     logger.info(f"file {file_record.key} loaded")
-    if file_record.source == "epam":
-        course = "epam"
-    elif file_record.source == "softserve":
-        course = "softserve"
+    if file_record.source in ADAPTERS.keys():
+        course = file_record.source
     else:
         file_record.status = "error"
         file_record.error_message = "unknown source"
