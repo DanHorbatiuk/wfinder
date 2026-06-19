@@ -100,6 +100,7 @@ services:
       - ./core:/opt/airflow/core
       - ./storage:/opt/airflow/storage
       - ./utils:/opt/airflow/utils
+      - ./notify:/opt/airflow/notify
     command: dag-processor
   airflow-webserver:
     image: apache/airflow:3.1.0
@@ -121,6 +122,9 @@ services:
       - ./utils:/opt/airflow/utils
     command: api-server
   airflow-scheduler:
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     build:
       context: .
       dockerfile: Dockerfile
@@ -150,6 +154,7 @@ services:
       - ./storage:/opt/airflow/storage
       - ./utils:/opt/airflow/utils
       - .:/opt/airflow/project
+      - ./notify:/opt/airflow/notify
     command: scheduler
 
 volumes:

@@ -34,11 +34,18 @@ def load_courses_pipeline_dag():
         process_pending_files()
         return True
 
+    @task
+    def notify_new_courses_task():
+        from notify.digest import build_and_send_today_digest
+        build_and_send_today_digest()
+        return True
+
     sources = get_sources()
     fetch_task = fetch_one_source.expand(source=sources)
     load_task = load_all_to_db()
+    notify_task = notify_new_courses_task()
 
-    _ = fetch_task >> load_task
+    _ = fetch_task >> load_task >> notify_task
 
 
 load_courses_pipeline_dag()
