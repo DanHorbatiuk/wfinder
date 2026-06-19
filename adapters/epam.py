@@ -13,24 +13,21 @@ class EpamAdapter(BaseAdapter):
             for country in course["PlanLocations"]:
                 if country["Country"] == "Ukraine":
                     ukraine_found = True
-                    continue
             if ukraine_found and course["PlanLevel"] > 2:
                 courses.append(
                     Course(
                         source=self.source,
-                        source_id=course["Id"],
+                        source_id=str(course["Id"]),
                         title=course["Name"],
                         url=None,
                         course_type=course.get("Type"),
                         direction=course.get("MainSkillStringId"),
                         format=course.get("Format"),
                         level=course.get("Level"),
-                        is_free=course.get("Pricing") == "Free",
                         price=course.get("Pricing"),
                         date_start=course.get("DateStarted"),
                         date_end=course.get("DateFinished"),
                         status=course.get("Status"),
-                        is_expired=False,
                         country="Ukraine",
                         city=None,
                         languages=course.get("ProgramLanguages"),

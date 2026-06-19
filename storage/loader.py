@@ -40,9 +40,8 @@ def process_one_file(
     content = response["Body"].read()
     raw_data = json.loads(content)
     logger.info(f"file {file_record.key} loaded")
-    if file_record.source in ADAPTERS.keys():
-        course = file_record.source
-    else:
+    adapter = ADAPTERS.get(file_record.source)
+    if adapter is None:
         file_record.status = "error"
         file_record.error_message = "unknown source"
         file_repo.session.commit()
@@ -50,11 +49,10 @@ def process_one_file(
         logger.info(f"unknown source: {file_record.source}")
         return
     logger.info(f"file source is {file_record.source}")
-    adapter = ADAPTERS.get(course)
     courses = adapter.parse(raw_data, file_record.id)
     logger.info(f"file transformed in Course record")
     for course in courses:
-        course_repository.load_course(course)
+        course_repository.upsert_course(course)
     file_record.status = "done"
     file_repo.session.commit()
     logger.info(f"file '{file_record.key}' processed, total: {len(courses)} courses")

@@ -1,5 +1,6 @@
-from requests import session
-from sqlalchemy import select
+from datetime import datetime
+
+from sqlalchemy import select, inspect
 from sqlalchemy.orm import Session
 
 from core.model import FileRecord, Course
@@ -26,9 +27,26 @@ class FileRecordRepository:
 
 class CourseRepository:
 
+    EXCLUDED_FIELDS = {"id", "source", "source_id", "created_at", "active_from", "active_to",
+                       "file_record_id"}
+
     def __init__(self, session: Session):
         self.session = session
 
-    def load_course(self, course: Course) -> None:
+    def upsert_course(self, course: Course) -> None:
+        existing = (
+            self.session.query(Course)
+            .filter(
+                Course.source == course.source,
+                Course.source_id == course.source_id,
+                Course.active_to.is_(None), # is active
+            )
+            .one_or_none()
+        )
+
+        now = datetime.utcnow()
+        course.active_from = now
+        if existing is not None:
+            existing.active_to = now
+
         self.session.add(course)
-        self.session.commit()

@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from pygments.lexer import default
 from sqlalchemy import (
     Boolean,
     Column,
@@ -7,7 +8,7 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
-    Index,
+    Index, PrimaryKeyConstraint, UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import declarative_base, relationship
@@ -41,9 +42,12 @@ class FileRecord(Base):
 
 class Course(Base):
     __tablename__ = "courses"
-    __table_args__ = (
-        Index("ix_course_source_source_id", "source", "source_id"),
-    )
+    Index(
+        "uq_active_course_per_source",
+        "source", "source_id",
+        unique=True,
+        postgresql_where=(Column("active_to") == None),
+    ) # checks unique combinations of ("source", "source_id") only in rows with active status
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     source = Column(String, nullable=False)  # "epam" | "softserve" | "sigma"
@@ -54,20 +58,17 @@ class Course(Base):
     direction = Column(String, nullable=True)  # "DevOps", "CloudAndDevOps", "QA"
     format = Column(String, nullable=True)  # "Online", "Offline"
     level = Column(String, nullable=True)  # "Junior", "Middle", "Specialization"
-    is_free = Column(Boolean, default=False, nullable=False)
     price = Column(String, nullable=True)  # "Free" or actual price string
     date_start = Column(DateTime, nullable=True)
     date_end = Column(DateTime, nullable=True)
     status = Column(String, nullable=True)  # "Open for Registration", "RegistrationOpen"
-    is_expired = Column(Boolean, default=False, nullable=False)
     country = Column(String, nullable=True)
     city = Column(String, nullable=True)
     languages = Column(JSONB, nullable=True)  # ["English", "Ukrainian"]
 
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
-    )
+    active_from = Column(DateTime, nullable=True)
+    active_to = Column(DateTime, nullable=True)  # NULL = active
 
     file_record_id = Column(Integer, ForeignKey("file_record.id"), nullable=False)
     file_record = relationship("FileRecord", back_populates="courses")
